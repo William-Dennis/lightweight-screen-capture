@@ -18,7 +18,7 @@ def show_screen(fps: float = DEFAULT_FPS):
         cv2.imshow(window_name, bgr_frame)
 
         # Check for 'q' key press
-        if cv2.waitKey(1000 // fps) & 0xFF == ord("q"):
+        if cv2.waitKey(int(1000 // fps)) & 0xFF == ord("q"):
             break
 
         # Check if window was closed by user
