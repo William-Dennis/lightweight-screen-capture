@@ -1,19 +1,20 @@
 import cv2
-from .capture import capture_screen
+from .screen_capture import capture_screen
 import time
 
 
-def show_screen(functions=[]):
+def display(functions=[], source=capture_screen, source_kwargs={}):
     """Continuously capture and display the screen until 'q' is pressed."""
-    monitor = 1
     window_name = "Screen Capture"
 
-    # Create the window once before the loop
+    # DISPLAY_W, DISPLAY_H = 1000, 600
+
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    # cv2.resizeWindow(window_name, DISPLAY_W, DISPLAY_H)
 
     frame_timings = {0: 0, 1: 0}
     while True:
-        bgra_frame = capture_screen(monitor)
+        bgra_frame = source(**source_kwargs)
         bgr_frame = cv2.cvtColor(bgra_frame, cv2.COLOR_BGRA2BGR)
 
         if len(functions) > 0:
