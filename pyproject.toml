@@ -1,5 +1,5 @@
 [project]
-name = "python-template"
+name = "lightweight_screen_capture"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "mss>=10.1.0",
     "numpy>=2.4.0",
+    "opencv-python>=4.11.0.86",
     "ruff>=0.14.10",
 ]
 
