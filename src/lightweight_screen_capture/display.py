@@ -2,10 +2,8 @@ import cv2
 from .capture import capture_screen
 import time
 
-DEFAULT_MAX_FPS = 40.0
 
-
-def show_screen(functions=[], fps: float = DEFAULT_MAX_FPS):
+def show_screen(functions=[]):
     """Continuously capture and display the screen until 'q' is pressed."""
     monitor = 1
     window_name = "Screen Capture"
@@ -17,14 +15,15 @@ def show_screen(functions=[], fps: float = DEFAULT_MAX_FPS):
     while True:
         bgra_frame = capture_screen(monitor)
         bgr_frame = cv2.cvtColor(bgra_frame, cv2.COLOR_BGRA2BGR)
-        cv2.imshow(window_name, bgr_frame)
 
         if len(functions) > 0:
             for f in functions:
-                f((frame_timings, bgra_frame))
+                f((frame_timings, bgr_frame))
+
+        cv2.imshow(window_name, bgr_frame)
 
         # Check for 'q' key press
-        if cv2.waitKey(int(1000 // fps)) & 0xFF == ord("q"):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
         # Check if window was closed by user
