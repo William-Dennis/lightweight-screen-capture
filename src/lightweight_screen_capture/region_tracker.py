@@ -1,7 +1,7 @@
 """Temporal tracking and smoothing for detected regions."""
 
 import numpy as np
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from collections import deque
 
 
@@ -33,38 +33,50 @@ class RegionTracker:
         union_area = box1_area + box2_area - inter_area
         return inter_area / union_area if union_area > 0 else 0
 
+    def _find_best_match(self, box: Tuple) -> Optional[int]:
+        """Find best matching track for box."""
+        best_iou, best_id = 0, None
+        for track_id, track in self.tracked_regions.items():
+            iou = self._compute_iou(box, track["box"])
+            if iou > best_iou and iou > self.iou_threshold:
+                best_iou, best_id = iou, track_id
+        return best_id
+
+    def _update_track(self, track_id: int, box: Tuple, conf: float, cls: int):
+        """Update existing track with new detection."""
+        track = self.tracked_regions[track_id]
+        track["scores"].append(conf)
+        track["box"] = box
+        track["cls"] = cls
+
+    def _create_track(self, box: Tuple, conf: float, cls: int) -> int:
+        """Create new track."""
+        track_id = self.next_id
+        self.next_id += 1
+        self.tracked_regions[track_id] = {
+            "box": box,
+            "scores": deque([conf], maxlen=self.history_size),
+            "cls": cls,
+        }
+        return track_id
+
     def update(self, detections: List[Tuple]) -> List[Tuple[int, Tuple, float]]:
         """Update tracked regions and return (track_id, box, smooth_score)."""
         matched_ids = set()
-        updated_tracks = []
         for det in detections:
             x1, y1, x2, y2, conf, cls = det
             box = (x1, y1, x2, y2)
-            best_iou, best_id = 0, None
-            for track_id, track in self.tracked_regions.items():
-                iou = self._compute_iou(box, track["box"])
-                if iou > best_iou and iou > self.iou_threshold:
-                    best_iou, best_id = iou, track_id
-            if best_id is not None:
-                track = self.tracked_regions[best_id]
-                track["scores"].append(conf)
-                track["box"] = box
-                track["cls"] = cls
-                matched_ids.add(best_id)
+            track_id = self._find_best_match(box)
+            if track_id is not None:
+                self._update_track(track_id, box, conf, cls)
             else:
-                best_id = self.next_id
-                self.next_id += 1
-                self.tracked_regions[best_id] = {
-                    "box": box,
-                    "scores": deque([conf], maxlen=self.history_size),
-                    "cls": cls,
-                }
-                matched_ids.add(best_id)
+                track_id = self._create_track(box, conf, cls)
+            matched_ids.add(track_id)
         self.tracked_regions = {
             k: v for k, v in self.tracked_regions.items() if k in matched_ids
         }
-        for track_id, track in self.tracked_regions.items():
-            smooth_score = np.mean(track["scores"])
-            if smooth_score >= self.score_threshold:
-                updated_tracks.append((track_id, track["box"], smooth_score))
-        return updated_tracks
+        return [
+            (tid, t["box"], np.mean(t["scores"]))
+            for tid, t in self.tracked_regions.items()
+            if np.mean(t["scores"]) >= self.score_threshold
+        ]
