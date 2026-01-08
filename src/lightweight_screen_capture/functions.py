@@ -3,7 +3,7 @@ import cv2
 
 from .helper import safe_division
 
-cache = {"last_fps": 30}
+cache = {}
 
 
 def dummy_function(frame_data: tuple):
@@ -16,7 +16,7 @@ def show_fps(frame_data: tuple):
 
     cv2.putText(
         frame_data[1],
-        f"FPS: {int(fps)}",
+        f"FPS: {fps:.1f}",
         (10, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.8,
@@ -26,15 +26,28 @@ def show_fps(frame_data: tuple):
     )
 
 
-def show_smooth_fps(frame_data: tuple, smoothing_factor=0.99):
+def show_smooth_fps(frame_data: tuple, smoothing_factor=0.95):
     timings = frame_data[0]
-    fps = safe_division(1, (timings[1] - timings[0]))
-    smooth_fps = smoothing_factor * cache["last_fps"] + (1 - smoothing_factor) * fps
-    cache["last_fps"] = smooth_fps
+    dt = max(timings[1] - timings[0], 1e-6)
+
+    cache["frames_shown"] = cache.get("frames_shown", 0) + 1
+
+    if cache["frames_shown"] < 30:
+        show_fps(frame_data)
+        return
+
+    if "last_dt" not in cache:
+        cache["last_dt"] = dt
+    else:
+        cache["last_dt"] = (
+            smoothing_factor * cache["last_dt"] + (1 - smoothing_factor) * dt
+        )
+
+    smooth_fps = 1.0 / cache["last_dt"]
 
     cv2.putText(
         frame_data[1],
-        f"FPS: {int(smooth_fps)}",
+        f"FPS: {smooth_fps:.1f}",
         (10, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.8,
@@ -42,7 +55,6 @@ def show_smooth_fps(frame_data: tuple, smoothing_factor=0.99):
         2,
         cv2.LINE_AA,
     )
-
 
 
 _face_cascade = cv2.CascadeClassifier(
