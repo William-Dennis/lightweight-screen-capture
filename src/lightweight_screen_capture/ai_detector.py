@@ -25,14 +25,20 @@ class AIContentPipeline:
         output_dir: str = "ai_content_alerts",
         device: str = None,
         use_square_detector: bool = True,
+        save_threshold: float = 0.9,  # Only save detections above 90%
+        display_all: bool = True,  # Display all detections regardless of score
+        min_score: float = 0.0,  # Minimum score to display
     ):
         """Initialize AI content detection pipeline with GPU acceleration."""
         self.enable_detector = enable_detector
         self.detector: Optional[RegionDetector] = None
         self.square_detector: Optional[SquareBoxDetector] = None
         self.use_square_detector = use_square_detector
+        self.save_threshold = save_threshold
+        self.display_all = display_all
+        self.min_score = min_score
         self.tracker = RegionTracker(
-            iou_threshold=0.3, history_size=5, score_threshold=0.6
+            iou_threshold=0.3, history_size=5, score_threshold=min_score
         )
         self.alert_handler = AlertHandler(output_dir=output_dir)
         self.alerted_tracks = set()
@@ -77,13 +83,31 @@ class AIContentPipeline:
             return self.detector.detect_regions(frame)
         return []
 
-    def _draw_box(self, frame: np.ndarray, box: Tuple, score: float):
-        """Draw detection box and label on frame."""
+    def _draw_box(
+        self, frame: np.ndarray, box: Tuple, score: float, should_save: bool = False
+    ):
+        """Draw detection box and label on frame with color coding."""
         x1, y1, x2, y2 = box
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-        label = f"AI:{score:.2f}"
+        # Color: Green if will be saved (>90%), Red otherwise
+        color = (0, 255, 0) if should_save else (0, 0, 255)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        # Display AI percentage
+        label = f"AI: {score * 100:.1f}%"
+        # Add background to text for better visibility
+        (text_width, text_height), _ = cv2.getTextSize(
+            label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
+        )
+        cv2.rectangle(
+            frame, (x1, y1 - text_height - 10), (x1 + text_width + 10, y1), color, -1
+        )
         cv2.putText(
-            frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2
+            frame,
+            label,
+            (x1 + 5, y1 - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2,
         )
 
     def process_frame(self, frame: np.ndarray) -> np.ndarray:
@@ -95,9 +119,16 @@ class AIContentPipeline:
             tracked = self.tracker.update(detections)
             active_track_ids = set(self.tracker.tracked_regions.keys())
             self.alerted_tracks &= active_track_ids
+
             for track_id, box, score in tracked:
-                self._draw_box(frame, box, score)
-                if track_id not in self.alerted_tracks:
+                # Determine if this should be saved (score > save_threshold)
+                should_save = score >= self.save_threshold
+
+                # Draw all boxes with their AI percentage
+                self._draw_box(frame, box, score, should_save)
+
+                # Only save and alert for high-confidence detections
+                if should_save and track_id not in self.alerted_tracks:
                     saved_path = self.alert_handler.save_alert(
                         frame, box, score, track_id
                     )
@@ -111,14 +142,15 @@ class AIContentPipeline:
 _pipeline: Optional[AIContentPipeline] = None
 
 
-def detect_ai_content(
-    frame: np.ndarray,
-    frame_metadata: dict,
-    model_size: str = "n",
-    output_dir: str = "ai_content_alerts",
-    use_square_detector: bool = True,
-):
-    """Detect AI content in frame and modify in-place (compatible with display)."""
+def _get_or_create_pipeline(
+    model_size: str,
+    output_dir: str,
+    use_square_detector: bool,
+    save_threshold: float,
+    display_all: bool,
+    min_score: float,
+) -> AIContentPipeline:
+    """Get or create global pipeline instance."""
     global _pipeline
     if _pipeline is None:
         _pipeline = AIContentPipeline(
@@ -127,6 +159,31 @@ def detect_ai_content(
             device=None,
             output_dir=output_dir,
             use_square_detector=use_square_detector,
+            save_threshold=save_threshold,
+            display_all=display_all,
+            min_score=min_score,
         )
-    processed = _pipeline.process_frame(frame.copy())
+    return _pipeline
+
+
+def detect_ai_content(
+    frame: np.ndarray,
+    frame_metadata: dict,
+    model_size: str = "n",
+    output_dir: str = "ai_content_alerts",
+    use_square_detector: bool = True,
+    save_threshold: float = 0.9,
+    display_all: bool = True,
+    min_score: float = 0.0,
+):
+    """Detect AI content, display all boxes with AI%, save only high-confidence (>90%)."""
+    pipeline = _get_or_create_pipeline(
+        model_size,
+        output_dir,
+        use_square_detector,
+        save_threshold,
+        display_all,
+        min_score,
+    )
+    processed = pipeline.process_frame(frame.copy())
     frame[:] = processed

@@ -12,7 +12,7 @@ class RegionTracker:
         self,
         iou_threshold: float = 0.3,
         history_size: int = 5,
-        score_threshold: float = 0.6,
+        score_threshold: float = 0.0,  # Changed to 0.0 to return all tracks
         max_age: int = 5,
     ):
         """Initialize region tracker with IOU and history parameters."""
