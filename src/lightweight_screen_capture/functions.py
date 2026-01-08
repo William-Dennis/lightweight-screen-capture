@@ -42,3 +42,21 @@ def show_smooth_fps(frame_data: tuple, smoothing_factor=0.99):
         2,
         cv2.LINE_AA,
     )
+
+
+
+_face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+
+
+def draw_head_box(frame_data: tuple):
+    """Detect heads and draw boxes directly on bgr_frame (in place)."""
+    bgr_frame = frame_data[1]
+    gray = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2GRAY)
+    faces = _face_cascade.detectMultiScale(
+        gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
+    )
+
+    for x, y, w, h in faces:
+        cv2.rectangle(bgr_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
