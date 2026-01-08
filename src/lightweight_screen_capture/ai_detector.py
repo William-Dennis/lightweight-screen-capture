@@ -24,7 +24,7 @@ class AIContentPipeline:
         model_size: str = "n",
         output_dir: str = "ai_content_alerts",
         device: str = None,
-        use_square_detector: bool = False,
+        use_square_detector: bool = True,
     ):
         """Initialize AI content detection pipeline with GPU acceleration."""
         self.enable_detector = enable_detector
@@ -116,7 +116,7 @@ def detect_ai_content(
     frame_metadata: dict,
     model_size: str = "n",
     output_dir: str = "ai_content_alerts",
-    use_square_detector: bool = False,
+    use_square_detector: bool = True,
 ):
     """Detect AI content in frame and modify in-place (compatible with display)."""
     global _pipeline
