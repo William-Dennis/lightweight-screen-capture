@@ -12,14 +12,14 @@ def display(functions=[], source=capture_screen, source_kwargs={}):
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     # cv2.resizeWindow(window_name, DISPLAY_W, DISPLAY_H)
 
-    frame_timings = {0: 0, 1: 0}
+    frame_metadata = {"timings": {"frame": [0, 0]}}
     while True:
         bgra_frame = source(**source_kwargs)
         bgr_frame = cv2.cvtColor(bgra_frame, cv2.COLOR_BGRA2BGR)
 
         if len(functions) > 0:
             for f in functions:
-                f((frame_timings, bgr_frame))
+                f(bgr_frame, frame_metadata)
 
         cv2.imshow(window_name, bgr_frame)
 
@@ -32,7 +32,7 @@ def display(functions=[], source=capture_screen, source_kwargs={}):
             break
 
         # add timings
-        frame_timings[0] = frame_timings[1]
-        frame_timings[1] = time.perf_counter()
+        frame_metadata["timings"]["frame"][0] = frame_metadata["timings"]["frame"][1]
+        frame_metadata["timings"]["frame"][1] = time.perf_counter()
 
     cv2.destroyAllWindows()

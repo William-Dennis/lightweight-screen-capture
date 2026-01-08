@@ -6,16 +6,16 @@ from .helper import safe_division
 cache = {}
 
 
-def dummy_function(frame_data: tuple):
+def dummy_function(frame, frame_metadata: dict):
     time.sleep(1)
 
 
-def show_fps(frame_data: tuple):
-    timings = frame_data[0]
+def show_fps(frame, frame_metadata: dict):
+    timings = frame_metadata["timings"]["frame"]
     fps = safe_division(1, (timings[1] - timings[0]))
 
     cv2.putText(
-        frame_data[1],
+        frame,
         f"FPS: {fps:.1f}",
         (10, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
@@ -26,14 +26,14 @@ def show_fps(frame_data: tuple):
     )
 
 
-def show_smooth_fps(frame_data: tuple, smoothing_factor=0.95):
-    timings = frame_data[0]
+def show_smooth_fps(frame, frame_metadata: dict, smoothing_factor=0.95):
+    timings = frame_metadata["timings"]["frame"]
     dt = max(timings[1] - timings[0], 1e-6)
 
     cache["frames_shown"] = cache.get("frames_shown", 0) + 1
 
     if cache["frames_shown"] < 30:
-        show_fps(frame_data)
+        show_fps(frame, frame_metadata)
         return
 
     if "last_dt" not in cache:
@@ -46,7 +46,7 @@ def show_smooth_fps(frame_data: tuple, smoothing_factor=0.95):
     smooth_fps = 1.0 / cache["last_dt"]
 
     cv2.putText(
-        frame_data[1],
+        frame,
         f"FPS: {smooth_fps:.1f}",
         (10, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
@@ -62,9 +62,9 @@ _face_cascade = cv2.CascadeClassifier(
 )
 
 
-def draw_head_box(frame_data: tuple):
+def draw_head_box(frame, frame_metadata: dict):
     """Detect heads and draw boxes directly on bgr_frame (in place)."""
-    bgr_frame = frame_data[1]
+    bgr_frame = frame
     gray = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2GRAY)
     faces = _face_cascade.detectMultiScale(
         gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
