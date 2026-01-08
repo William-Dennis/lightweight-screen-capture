@@ -13,6 +13,9 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "pywin32>=311",
     "ruff>=0.14.10",
+    "ultralytics>=8.0.0",
+    "torch>=2.6.0",
+    "pillow>=10.3.0",
 ]
 
 [build-system]
