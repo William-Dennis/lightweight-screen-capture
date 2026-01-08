@@ -13,11 +13,13 @@ class RegionTracker:
         iou_threshold: float = 0.3,
         history_size: int = 5,
         score_threshold: float = 0.6,
+        max_age: int = 5,
     ):
         """Initialize region tracker with IOU and history parameters."""
         self.iou_threshold = iou_threshold
         self.history_size = history_size
         self.score_threshold = score_threshold
+        self.max_age = max_age
         self.tracked_regions: Dict[int, dict] = {}
         self.next_id = 0
 
@@ -33,10 +35,11 @@ class RegionTracker:
         union_area = box1_area + box2_area - inter_area
         return inter_area / union_area if union_area > 0 else 0
 
-    def _find_best_match(self, box: Tuple) -> Optional[int]:
-        """Find best matching track for box."""
+    def _find_best_match(self, box: Tuple, unmatched_tracks: set) -> Optional[int]:
+        """Find best matching track for box from unmatched tracks only."""
         best_iou, best_id = 0, None
-        for track_id, track in self.tracked_regions.items():
+        for track_id in unmatched_tracks:
+            track = self.tracked_regions[track_id]
             iou = self._compute_iou(box, track["box"])
             if iou > best_iou and iou > self.iou_threshold:
                 best_iou, best_id = iou, track_id
@@ -48,6 +51,7 @@ class RegionTracker:
         track["scores"].append(conf)
         track["box"] = box
         track["cls"] = cls
+        track["age"] = 0
 
     def _create_track(self, box: Tuple, conf: float, cls: int) -> int:
         """Create new track."""
@@ -57,23 +61,28 @@ class RegionTracker:
             "box": box,
             "scores": deque([conf], maxlen=self.history_size),
             "cls": cls,
+            "age": 0,
         }
         return track_id
 
     def update(self, detections: List[Tuple]) -> List[Tuple[int, Tuple, float]]:
         """Update tracked regions and return (track_id, box, smooth_score)."""
+        unmatched_tracks = set(self.tracked_regions.keys())
         matched_ids = set()
         for det in detections:
             x1, y1, x2, y2, conf, cls = det
             box = (x1, y1, x2, y2)
-            track_id = self._find_best_match(box)
+            track_id = self._find_best_match(box, unmatched_tracks)
             if track_id is not None:
                 self._update_track(track_id, box, conf, cls)
+                unmatched_tracks.remove(track_id)
             else:
                 track_id = self._create_track(box, conf, cls)
             matched_ids.add(track_id)
+        for track_id in unmatched_tracks:
+            self.tracked_regions[track_id]["age"] += 1
         self.tracked_regions = {
-            k: v for k, v in self.tracked_regions.items() if k in matched_ids
+            k: v for k, v in self.tracked_regions.items() if v["age"] < self.max_age
         }
         result = []
         for tid, t in self.tracked_regions.items():
