@@ -1,77 +1,46 @@
-# Square Box Detector Usage
+# Rectangle Detection
 
-The square box detector is a lightweight, low-latency alternative to YOLOv8 for detecting square or rectangular regions like advertisements and image galleries.
-
-## Features
-
-- **Low Latency**: Uses only OpenCV (cv2) - no deep learning required
-- **Fast**: Suitable for 10+ FPS on CPU
-- **No GPU Required**: Pure CPU implementation
-- **Detects**: Square/rectangular regions like ads, images in galleries, UI elements
+Simple OpenCV-based rectangle detection for finding rectangular regions in images.
 
 ## Usage
 
-### With detect_ai_content function
-
 ```python
-from lightweight_screen_capture import display, capture_screen, detect_ai_content
+from lightweight_screen_capture import detect_rectangles
 
-# Use square detector instead of YOLOv8
-display(
-    functions=[lambda f, m: detect_ai_content(f, m, use_square_detector=True)],
-    source=capture_screen
-)
-```
-
-### Direct usage
-
-```python
-from lightweight_screen_capture.square_box_detector import SquareBoxDetector
-import cv2
-
-# Initialize detector
-detector = SquareBoxDetector(
-    min_area=10000,      # Minimum box area (pixels)
-    max_area=500000,     # Maximum box area (pixels)
-    aspect_ratio_tolerance=0.3  # How square (0.3 means 0.7-1.3 aspect ratio)
+rectangles = detect_rectangles(
+    frame,           # Input BGR image
+    min_area=10000,  # Minimum rectangle area (pixels)
+    max_area=500000  # Maximum rectangle area (pixels)
 )
 
-# Detect regions
-frame = cv2.imread('screenshot.png')
-regions = detector.detect_square_regions(frame)
-
-# Returns list of (x1, y1, x2, y2, confidence, class_id)
-for x1, y1, x2, y2, conf, cls in regions:
-    print(f"Square region at ({x1}, {y1}) - ({x2}, {y2}), conf: {conf:.2f}")
+# Returns: [(x1, y1, x2, y2, confidence), ...]
+for x1, y1, x2, y2, confidence in rectangles:
+    print(f"Found rectangle with {confidence*100:.1f}% confidence")
 ```
-
-## Configuration
-
-- **min_area** (default: 10000): Minimum pixel area for detection
-- **max_area** (default: 500000): Maximum pixel area for detection
-- **aspect_ratio_tolerance** (default: 0.3): How close to square (1.0 = perfect square)
-
-## Performance Comparison
-
-| Detector | FPS (CPU) | FPS (GPU) | Latency |
-|----------|-----------|-----------|---------|
-| YOLOv8n  | 2-5 FPS   | 10-20 FPS | ~100ms  |
-| Square Box | 10-30 FPS | N/A       | ~10ms   |
-
-## Use Cases
-
-- Detecting advertisement boxes on websites
-- Finding image thumbnails in galleries
-- Locating square UI elements
-- Quick region-of-interest detection
-- Real-time applications where speed > accuracy
 
 ## Algorithm
 
-1. Convert frame to grayscale
-2. Apply Canny edge detection
-3. Find contours
-4. Filter by area and aspect ratio
-5. Return bounding boxes
+1. Convert to grayscale
+2. Apply Gaussian blur
+3. Canny edge detection
+4. Morphological closing to connect edges
+5. Find contours
+6. Filter by:
+   - Area (min_area to max_area)
+   - Shape (must have 4 corners)
+   - Aspect ratio (0.1 to 10.0)
+7. Calculate confidence based on fill ratio
+8. Remove overlapping detections (IOU > 0.5)
 
-This is much faster than deep learning but less accurate for complex scenes.
+## Confidence Score
+
+Confidence (0.0-1.0) represents how well the contour fills its bounding box:
+- 1.0 = Perfect rectangle
+- 0.7+ = Good rectangle
+- <0.5 = Irregular shape
+
+## Performance
+
+- ~10-30 FPS on CPU (depends on image size and complexity)
+- No GPU or ML models required
+- Low latency (~10-50ms per frame)
