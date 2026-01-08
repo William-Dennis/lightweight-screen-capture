@@ -91,10 +91,20 @@ class AIContentPipeline:
 _pipeline: Optional[AIContentPipeline] = None
 
 
-def detect_ai_content(frame: np.ndarray, frame_metadata: dict):
-    """Function to detect AI content in frame (compatible with display function)."""
+def detect_ai_content(
+    frame: np.ndarray,
+    frame_metadata: dict,
+    model_size: str = "n",
+    output_dir: str = "ai_content_alerts",
+):
+    """Detect AI content in frame and modify in-place (compatible with display)."""
     global _pipeline
     if _pipeline is None:
-        _pipeline = AIContentPipeline(enable_detector=True, model_size="n", device=None)
+        _pipeline = AIContentPipeline(
+            enable_detector=True,
+            model_size=model_size,
+            device=None,
+            output_dir=output_dir,
+        )
     processed = _pipeline.process_frame(frame.copy())
     frame[:] = processed

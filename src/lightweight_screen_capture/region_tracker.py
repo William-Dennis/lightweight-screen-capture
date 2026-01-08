@@ -75,8 +75,9 @@ class RegionTracker:
         self.tracked_regions = {
             k: v for k, v in self.tracked_regions.items() if k in matched_ids
         }
-        return [
-            (tid, t["box"], np.mean(t["scores"]))
-            for tid, t in self.tracked_regions.items()
-            if np.mean(t["scores"]) >= self.score_threshold
-        ]
+        result = []
+        for tid, t in self.tracked_regions.items():
+            score = np.mean(t["scores"])
+            if score >= self.score_threshold:
+                result.append((tid, t["box"], score))
+        return result

@@ -208,3 +208,6 @@ __marimo__/
 
 # AI content detection alerts
 ai_content_alerts/
+
+# YOLOv8 model files
+yolov8*.pt

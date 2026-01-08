@@ -21,14 +21,15 @@ class AlertHandler:
         self, frame: np.ndarray, region_box: Tuple, score: float, track_id: int
     ) -> str:
         """Save flagged image with metadata, returns saved file path."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        now = datetime.now()
+        timestamp = now.strftime("%Y%m%d_%H%M%S_%f")
         filename = f"alert_{timestamp}_{track_id}"
         x1, y1, x2, y2 = region_box
         cropped = frame[y1:y2, x1:x2]
         img_path = self.output_dir / f"{filename}.jpg"
         cv2.imwrite(str(img_path), cropped)
         metadata = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now.isoformat(),
             "track_id": track_id,
             "confidence_score": float(score),
             "bbox": {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
