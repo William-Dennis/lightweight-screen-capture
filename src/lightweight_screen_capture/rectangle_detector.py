@@ -7,26 +7,30 @@ from typing import List, Tuple
 
 def detect_rectangles(
     frame: np.ndarray,
-    min_area: int = 10000,
-    max_area: int = 500000,
-) -> List[Tuple[int, int, int, int, float]]:
+    frame_metadata: dict,
+    min_percentage: float = 0.05,
+    max_percentage: float = 0.8,
+    show_confidence: bool = True,
+) -> None:
     """
-    Detect rectangular regions in frame using edge detection.
+    Detect rectangular regions in frame using edge detection and draw them.
 
     Args:
-        frame: Input image (BGR format)
-        min_area: Minimum rectangle area in pixels
-        max_area: Maximum rectangle area in pixels
-
-    Returns:
-        List of (x1, y1, x2, y2, confidence) tuples
+        frame: Input image (BGR format) - modified in place
+        frame_metadata: Metadata dictionary for frame information
+        min_percentage: Minimum rectangle area as a percentage of total frame area
+        max_percentage: Maximum rectangle area as a percentage of total frame area
     """
+    total_area = frame.shape[0] * frame.shape[1]
+    min_area = total_area * min_percentage
+    max_area = total_area * max_percentage
+
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
+    edges = cv2.Canny(blurred, 30, 120)  # from (50,150) to (30,120)
 
     kernel = np.ones((3, 3), np.uint8)
-    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel, iterations=2)
+    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel, iterations=1)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -37,7 +41,7 @@ def detect_rectangles(
             continue
 
         peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+        approx = cv2.approxPolyDP(contour, 0.05 * peri, True)
 
         if len(approx) != 4:
             continue
@@ -57,7 +61,25 @@ def detect_rectangles(
         rectangles.append((x, y, x + w, y + h, confidence))
 
     rectangles = _remove_overlapping(rectangles)
-    return rectangles
+    
+    # Draw detected rectangles on frame
+    for x1, y1, x2, y2, confidence in rectangles:
+        # Color based on confidence (green for high confidence, yellow for low)
+        color = (0, int(255 * confidence), int(255 * (1 - confidence)))
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        
+        if show_confidence:
+            # Draw confidence score
+            cv2.putText(
+                frame,
+                f"{confidence:.2f}",
+                (x1, y1 - 5),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                color,
+                1,
+                cv2.LINE_AA,
+            )
 
 
 def _remove_overlapping(
