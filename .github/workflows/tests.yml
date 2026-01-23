@@ -35,22 +35,10 @@ jobs:
           restore-keys: |
             unit-${{ runner.os }}-
 
-      - name: Create virtual environment
-        run: python -m venv .venv
-
-      - name: Activate virtual environment and install uv
-        run: |
-          # Linux / macOS activation
-          if [ "${{ runner.os }}" = "Linux" ] || [ "${{ runner.os }}" = "macOS" ]; then
-            source .venv/bin/activate
-          else
-            # Windows activation for Git Bash shell
-            source .venv/Scripts/activate
-          fi
-          python -m pip install --upgrade pip
-          pip install astral-sh/setup-uv@v3
-          uv install --version latest
-        shell: bash
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -60,21 +48,19 @@ jobs:
 
       - name: Sync uv environment
         run: |
-          if [ "${{ runner.os }}" = "Linux" ] || [ "${{ runner.os }}" = "macOS" ]; then
-            source .venv/bin/activate
-          else
-            source .venv/Scripts/activate
-          fi
           uv sync
         shell: bash
 
-      - name: Run unit tests
+      - name: Run unit tests (Linux)
+        if: runner.os == 'Linux'
         run: |
-          if [ "${{ runner.os }}" = "Linux" ] || [ "${{ runner.os }}" = "macOS" ]; then
-            source .venv/bin/activate
-            xvfb-run uv run pytest tests/unit_tests/ -v
-          else
-            source .venv/Scripts/activate
-            uv run pytest tests/unit_tests/ -v
-          fi
+          source .venv/bin/activate
+          xvfb-run uv run pytest tests/unit_tests/ -v
         shell: bash
+
+      - name: Run unit tests (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .\.venv\Scripts\Activate.ps1
+          uv run pytest tests/unit_tests/ -v
+        shell: pwsh
