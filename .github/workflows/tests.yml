@@ -11,8 +11,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  static_analysis:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.11
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Check Formatting & Lint
+        run: |
+          uv run ruff format --check
+          uv run ruff check --output-format=github
+          uv run ty check
+
   unit_tests:
     name: Unit Tests (${{ matrix.os }})
+    # Optional: Only run tests if linting passes to save credits
+    needs: static_analysis 
     strategy:
       fail-fast: false
       matrix:
@@ -24,7 +49,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5 # Upgraded to latest version
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"

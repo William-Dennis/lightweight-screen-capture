@@ -14,6 +14,7 @@ dependencies = [
     "pytest>=9.0.2",
     "pywin32>=311; sys_platform == 'win32'", # Only installs on Windows
     "ruff>=0.14.10",
+    "ty>=0.0.13",
 ]
 
 [build-system]
