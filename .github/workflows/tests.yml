@@ -27,34 +27,54 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: latest
-
-      - name: Cache virtual env
+      - name: Cache virtual environment
         uses: actions/cache@v4
         with:
           path: .venv
           key: unit-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: unit-${{ runner.os }}-
+          restore-keys: |
+            unit-${{ runner.os }}-
 
-      # Fix for Linux OpenCV/MSS failures
+      - name: Create virtual environment
+        run: python -m venv .venv
+
+      - name: Activate virtual environment and install uv
+        run: |
+          # Linux / macOS activation
+          if [ "${{ runner.os }}" = "Linux" ] || [ "${{ runner.os }}" = "macOS" ]; then
+            source .venv/bin/activate
+          else
+            # Windows activation for Git Bash shell
+            source .venv/Scripts/activate
+          fi
+          python -m pip install --upgrade pip
+          pip install astral-sh/setup-uv@v3
+          uv install --version latest
+        shell: bash
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-glx xvfb
+          sudo apt-get install -y libgl1 libglx-mesa0 libsm6 libxext6 xvfb
 
-      - name: Sync dev deps
-        run: uv sync --extra dev --frozen
+      - name: Sync uv environment
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ] || [ "${{ runner.os }}" = "macOS" ]; then
+            source .venv/bin/activate
+          else
+            source .venv/Scripts/activate
+          fi
+          uv sync
+        shell: bash
 
-      # Use xvfb-run on Linux to simulate a display for screen/camera libraries
       - name: Run unit tests
         run: |
-          if [ "${{ runner.os }}" == "Linux" ]; then
+          if [ "${{ runner.os }}" = "Linux" ] || [ "${{ runner.os }}" = "macOS" ]; then
+            source .venv/bin/activate
             xvfb-run uv run pytest tests/unit_tests/ -v
           else
+            source .venv/Scripts/activate
             uv run pytest tests/unit_tests/ -v
           fi
         shell: bash
