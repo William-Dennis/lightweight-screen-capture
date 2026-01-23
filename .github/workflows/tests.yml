@@ -19,48 +19,33 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         python-version: ['3.11']
     runs-on: ${{ matrix.os }}
+    
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache virtual environment
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: unit-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            unit-${{ runner.os }}-
-
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5 # Upgraded to latest version
         with:
-          version: latest
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libglx-mesa0 libsm6 libxext6 xvfb
+          sudo apt-get install -y libgl1 libglx-mesa0 xvfb
 
-      - name: Sync uv environment
-        run: |
-          uv sync
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Run unit tests
         shell: bash
-
-      - name: Run unit tests (Linux)
-        if: runner.os == 'Linux'
         run: |
-          source .venv/bin/activate
-          xvfb-run uv run pytest tests/unit_tests/ -v
-        shell: bash
-
-      - name: Run unit tests (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          .\.venv\Scripts\Activate.ps1
-          uv run pytest tests/unit_tests/ -v
-        shell: pwsh
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run uv run pytest tests/unit_tests/ -v
+          else
+            uv run pytest tests/unit_tests/ -v
+          fi
