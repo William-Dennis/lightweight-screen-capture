@@ -3,8 +3,8 @@ name: CI
 on:
   push:
     branches: ['**']
-  pull_request:
-    branches: ['**']
+    paths-ignore:
+      - '**/*.md'
 
 concurrency:
   group: ci-${{ github.ref || github.run_id }}
