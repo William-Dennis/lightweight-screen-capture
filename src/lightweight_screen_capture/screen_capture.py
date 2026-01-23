@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 if sys.platform == "win32":
-    import win32gui
+    import win32gui  # type: ignore
 
     WINDOWS = True
 

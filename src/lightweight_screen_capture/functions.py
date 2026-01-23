@@ -1,5 +1,6 @@
 import time
 import cv2
+import cv2.data
 
 from .helper import safe_division
 
