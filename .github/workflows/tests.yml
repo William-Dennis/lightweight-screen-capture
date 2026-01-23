@@ -1,0 +1,47 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Running on both Ubuntu (Linux) and Windows
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      # Install Linux-specific dependencies for OpenCV and MSS
+      - name: Install Linux System Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-glx xvfb
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      # xvfb-run provides a virtual display for Linux to prevent MSS/OpenCV initialization errors
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run uv run pytest
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        run: uv run pytest
