@@ -2,33 +2,34 @@ import mss
 import numpy as np
 import win32gui
 
-_sct = mss.mss()
+class ScreenCapturer:
+    def __init__(self):
+        # The resource is only initialized when the class is instantiated
+        self.sct = mss.mss()
 
+    def capture_screen(self, monitor: int = 1) -> np.ndarray:
+        if monitor >= len(self.sct.monitors):
+            raise IndexError(f"Monitor {monitor} not found.")
+        
+        img = self.sct.grab(self.sct.monitors[monitor])
+        return np.asarray(img)
 
-def capture_screen(monitor=1) -> np.ndarray:
-    img = _sct.grab(_sct.monitors[monitor])
-    return np.asarray(img)
+    def capture_window(self, window_name: str) -> np.ndarray:
+        hwnd = win32gui.FindWindow(None, window_name)
+        if hwnd == 0:
+            raise RuntimeError(f"Window '{window_name}' not found")
 
+        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
 
-def capture_window(window_name: str) -> np.ndarray:
-    """
-    Capture a specific window by its title.
-    Returns BGRA image as numpy array.
-    """
+        region = {
+            "left": left,
+            "top": top,
+            "width": max(0, right - left),
+            "height": max(0, bottom - top),
+        }
 
-    hwnd = win32gui.FindWindow(None, window_name)
-    if hwnd == 0:
-        raise RuntimeError(f"Window '{window_name}' not found")
+        img = self.sct.grab(region)
+        return np.asarray(img)
 
-    # Get window rect (includes borders)
-    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-
-    region = {
-        "left": left,
-        "top": top,
-        "width": right - left,
-        "height": bottom - top,
-    }
-
-    img = _sct.grab(region)
-    return np.asarray(img)
+    def close(self):
+        self.sct.close()

@@ -11,6 +11,7 @@ dependencies = [
     "mss>=10.1.0",
     "numpy>=2.4.0",
     "opencv-python>=4.11.0.86",
+    "pytest>=9.0.2",
     "pywin32>=311",
     "ruff>=0.14.10",
 ]
