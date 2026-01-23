@@ -1,47 +1,60 @@
-name: Unit Tests
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+concurrency:
+  group: ci-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Run Tests (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  unit_tests:
+    name: Unit Tests (${{ matrix.os }})
     strategy:
+      fail-fast: false
       matrix:
-        # Running on both Ubuntu (Linux) and Windows
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11"]
-
+        python-version: ['3.11']
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          version: "latest"
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-      # Install Linux-specific dependencies for OpenCV and MSS
-      - name: Install Linux System Dependencies
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+
+      - name: Cache virtual env
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: unit-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: unit-${{ runner.os }}-
+
+      # Fix for Linux OpenCV/MSS failures
+      - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-glx xvfb
 
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
+      - name: Sync dev deps
+        run: uv sync --extra dev --frozen
 
-      # xvfb-run provides a virtual display for Linux to prevent MSS/OpenCV initialization errors
-      - name: Run tests (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run uv run pytest
-
-      - name: Run tests (Windows)
-        if: runner.os == 'Windows'
-        run: uv run pytest
+      # Use xvfb-run on Linux to simulate a display for screen/camera libraries
+      - name: Run unit tests
+        run: |
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            xvfb-run uv run pytest tests/unit_tests/ -v
+          else
+            uv run pytest tests/unit_tests/ -v
+          fi
+        shell: bash
