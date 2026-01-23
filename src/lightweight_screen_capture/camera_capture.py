@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 class CameraManager:
     def __init__(self, index: int = 0):
         self.cap = cv2.VideoCapture(index)
@@ -12,7 +13,7 @@ class CameraManager:
         ret, frame = self.cap.read()
         if not ret:
             raise RuntimeError("Failed to capture frame from camera")
-        
+
         if flip:
             frame = cv2.flip(frame, 1)
         return frame
@@ -24,6 +25,6 @@ class CameraManager:
 
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()

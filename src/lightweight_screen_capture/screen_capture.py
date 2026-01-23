@@ -2,6 +2,7 @@ import mss
 import numpy as np
 import win32gui
 
+
 class ScreenCapturer:
     def __init__(self):
         # The resource is only initialized when the class is instantiated
@@ -10,7 +11,7 @@ class ScreenCapturer:
     def capture_screen(self, monitor: int = 1) -> np.ndarray:
         if monitor >= len(self.sct.monitors):
             raise IndexError(f"Monitor {monitor} not found.")
-        
+
         img = self.sct.grab(self.sct.monitors[monitor])
         return np.asarray(img)
 

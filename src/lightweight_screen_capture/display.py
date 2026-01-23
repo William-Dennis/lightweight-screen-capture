@@ -1,9 +1,8 @@
 import cv2
-from .screen_capture import capture_screen
 import time
 
 
-def display(functions=[], source=capture_screen, source_kwargs={}):
+def display(source, functions=[], source_kwargs={}):
     """Continuously capture and display the screen until 'q' is pressed."""
     window_name = "Screen Capture"
 
