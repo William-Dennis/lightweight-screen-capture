@@ -20,7 +20,7 @@ Keys
 - e -> for ending the round
 
 # RL Loop
-
+*We could examine the atari paper for more inspiration*
 Screen grab -> determine if it is the players turn -> CNN -> obersvation inputs -> action -> calculate reward
 
 # Reward
