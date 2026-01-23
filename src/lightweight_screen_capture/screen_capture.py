@@ -1,6 +1,11 @@
 import mss
 import numpy as np
-import win32gui
+import sys
+
+if sys.platform == "win32":
+    import win32gui
+
+    WINDOWS = True
 
 
 class ScreenCapturer:
@@ -16,6 +21,8 @@ class ScreenCapturer:
         return np.asarray(img)
 
     def capture_window(self, window_name: str) -> np.ndarray:
+        if not WINDOWS:
+            raise NotImplementedError("This feature is only available for windows")
         hwnd = win32gui.FindWindow(None, window_name)
         if hwnd == 0:
             raise RuntimeError(f"Window '{window_name}' not found")

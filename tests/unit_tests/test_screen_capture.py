@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import sys
 from unittest.mock import MagicMock, patch
 from lightweight_screen_capture.screen_capture import ScreenCapturer
 
@@ -41,6 +42,9 @@ def test_capture_screen_logic(mock_mss):
     mock_mss.grab.assert_called_once_with(mock_mss.monitors[1])
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="win32gui is only available on Windows"
+)
 def test_capture_window_math(mock_mss):
     with (
         patch("win32gui.FindWindow", return_value=123),
@@ -53,6 +57,9 @@ def test_capture_window_math(mock_mss):
         mock_mss.grab.assert_called_with(expected_region)
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="win32gui is only available on Windows"
+)
 def test_capture_window_not_found():
     with patch("win32gui.FindWindow", return_value=0):
         capturer = ScreenCapturer()
